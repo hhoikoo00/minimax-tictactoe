@@ -10,7 +10,11 @@ data Player = O | X
             deriving (Eq, Show)
 
 data Cell = Empty | Taken Player
-          deriving (Eq, Show)
+          deriving (Eq)
+
+instance Show Cell where
+  show Empty      = "-"
+  show (Taken p)  = show p
 
 type Board = ([Cell], Int)
 
@@ -65,8 +69,20 @@ diags (cs, n)
 -------------------------------------------------------------------
 
 gameOver :: Board -> Bool
-gameOver
-  = undefined
+gameOver b@(cells, _)
+  = isFull cells || or [gameOver' (f b) | f <- [rows, cols, diags]]
+    where
+      isFull :: [Cell] -> Bool
+      isFull
+        = not . (elem Empty)
+      gameOver' :: [[Cell]] -> Bool
+      gameOver'
+        = or . (map isOneElem) . (map nub)
+      isOneElem :: [Cell] -> Bool
+      isOneElem [Taken _]
+        = True
+      isOneElem _
+        = False
 
 -------------------------------------------------------------------
 
@@ -75,42 +91,92 @@ gameOver
 -- separated by whitespace. Bounds checking happens in tryMove, not here.
 --
 parsePosition :: String -> Maybe Position
-parsePosition
-  = undefined
+parsePosition str
+  = do
+      [c, c'] <- return (words str)
+      d <- readMaybe c :: Maybe Int
+      d' <- readMaybe c' :: Maybe Int
+      return (d, d')
 
 tryMove :: Player -> Position -> Board -> Maybe Board
-tryMove
-  = undefined
+tryMove p (i, j) (cells, n)
+  | i < 0 || i >= n || j < 0 || j >= n  = Nothing
+  | cells !! pos /= Empty               = Nothing
+  | otherwise                           = Just (newCells, n)
+    where
+      pos       = i * n + j
+      newCells  = replace pos (Taken p) cells
 
 -------------------------------------------------------------------
 -- I/O Functions
 
 prettyPrint :: Board -> IO ()
-prettyPrint
-  = undefined
+prettyPrint b
+  = mapM_ prettyPrint' rs
+    where
+      rs = rows b
+      prettyPrint' :: [Cell] -> IO ()
+      prettyPrint' cells
+        = do
+            putStrLn (intersperse ' ' (concatMap show cells))
 
 -- The following reflect the suggested structure, but you can manage the game
 -- in any way you see fit.
 
+-- Abstraction of 'try action until successful' pattern
+doParseAction :: (String -> Maybe a) -> String -> IO a
+doParseAction f errorMessage
+  = do
+      cin <- getLine
+      let parsed = f cin
+      case parsed of
+        (Just val)  ->  return val
+        Nothing     ->  do
+                          putStr errorMessage
+                          doParseAction f errorMessage
+
 -- Repeatedly read a target board position and invoke tryMove until
 -- the move is successful (Just ...).
 takeTurn :: Board -> Player -> IO Board
-takeTurn
-  = undefined
+takeTurn b@(cells, _) p
+  = do
+      putStr ("Player " ++ (show p) ++ " make your move (row col): ")
+      doParseAction f "Invalid move, try again: " :: IO Board
+    where
+      f cin
+        = parsePosition cin >>= \pos -> tryMove p pos b
 
 -- Manage a game by repeatedly: 1. printing the current board, 2. using
 -- takeTurn to return a modified board, 3. checking if the game is over,
 -- printing the board and a suitable congratulatory message to the winner
 -- if so.
 playGame :: Board -> Player -> IO ()
-playGame
-  = undefined
+playGame b@(cells, _) p
+  = do
+      prettyPrint b
+      b' <- takeTurn b p
+      isGameOver <- return (gameOver b')
+      if isGameOver
+        then do putStrLn ("Player " ++ (show p) ++ " has won!")
+      else if (p == O)
+        then do playGame b' X
+      else
+        do playGame b' O
 
 -- Print a welcome message, read the board dimension, invoke playGame and
 -- exit with a suitable message.
 main :: IO ()
 main
-  = undefined
+  = do
+      putStrLn "Welcome to tic tac toe on an N x N board"
+      putStr "Enter the board size (N): "
+      n <- doParseAction f "Invalid N size, try again: "
+      let b = (replicate (n * n) Empty, n)
+      playGame b O
+      putStrLn "Thank you for playing"
+    where
+      f x
+        = filterMaybe (\y -> (0 < y)) (readMaybe x :: Maybe Int)
 
 -------------------------------------------------------------------
 
@@ -135,3 +201,10 @@ testBoard3
       Taken O,Taken X,Empty,Empty,Taken X,
       Taken X,Empty,Taken O,Empty,Empty],
       5)
+
+testBoard4 :: ([Cell], Int)
+testBoard4
+  = ([Taken O,Taken X,Taken O,
+      Taken X,Taken O,Taken O,
+      Taken X,Taken O,Taken X],
+      3)
