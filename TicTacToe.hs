@@ -156,10 +156,10 @@ playGame b@(cells, _) p
       prettyPrint b
       b' <- takeTurn b p
       isGameOver <- return (gameOver b')
-      if isGameOver
-        then do putStrLn ("Player " ++ (show p) ++ " has won!")
-      else if (p == O)
-        then do playGame b' X
+      if isGameOver then
+        do putStrLn ("Player " ++ (show p) ++ " has won!")
+      else if (p == O) then
+        do playGame b' X
       else
         do playGame b' O
 
@@ -172,39 +172,8 @@ main
       putStr "Enter the board size (N): "
       n <- doParseAction f "Invalid N size, try again: "
       let b = (replicate (n * n) Empty, n)
-      playGame b O
+      playGame b X
       putStrLn "Thank you for playing"
     where
       f x
         = filterMaybe (\y -> (0 < y)) (readMaybe x :: Maybe Int)
-
--------------------------------------------------------------------
-
-testBoard1, testBoard2, testBoard3 :: Board
-
-testBoard1
-  = ([Taken O,Taken X,Empty,Taken O,
-      Taken O,Empty,Taken X,Taken X,
-      Taken O,Empty,Empty,Taken X,
-      Taken O,Taken X,Empty,Empty],
-      4)
-
-testBoard2
-  = ([Taken X,Empty,
-      Empty,Empty],
-      2)
-
-testBoard3
-  = ([Taken O,Taken X,Empty,Taken O,Taken X,
-      Taken O,Empty,Taken X,Taken X,Empty,
-      Empty,Empty,Taken X,Taken O,Taken O,
-      Taken O,Taken X,Empty,Empty,Taken X,
-      Taken X,Empty,Taken O,Empty,Empty],
-      5)
-
-testBoard4 :: ([Cell], Int)
-testBoard4
-  = ([Taken O,Taken X,Taken O,
-      Taken X,Taken O,Taken O,
-      Taken X,Taken O,Taken X],
-      3)
