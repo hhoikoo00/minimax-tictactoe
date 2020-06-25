@@ -1,15 +1,14 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -fwarn-tabs #-}
 module TicTacToe where
 
---import Data.Char
+import Data.Char
 import Data.Maybe
 import Data.List
---import Data.Maybe
 import Text.Read
 
 -------------------------------------------------------------------
 data Player = O | X
-            deriving (Eq, Show)
+            deriving (Eq, Show, Read)
 
 data Cell = Empty | Taken Player
           deriving (Eq)
@@ -120,52 +119,56 @@ utility b
 -------------------------------------------------------------------
 -- Minimax agent
 
-type AgentState = (Int, Position)
+-- Helpful type definitions and constants
+type AgentState = (Int, Board)
 
 utilityMinBound, utilityMaxBound :: Int
 utilityMinBound = -2
 utilityMaxBound = 2
 
 levelMax :: Int
-levelMax = 100
+levelMax = 3
 
-nullPosition :: Position
-nullPosition = (-1, -1)
-
+-- Returns the board after the minimax AI agent decided on its best move
 minimax :: Player -> Board -> IO Board
 minimax p b
-  = return (fromJust (result p a b))
+  = return b'
     where
-      (_, a)  = case p of X -> maxValue p b 0 --utilityMaxBound
-                          O -> minValue p b 0 --utilityMinBound
+      (_, b') = case p of X -> maxValue p b 0 utilityMaxBound
+                          O -> minValue p b 0 utilityMinBound
 
-maxValue :: Player -> Board -> Int -> AgentState
+-- Calculation for a Max agent
+maxValue :: Player -> Board -> Int -> Int -> AgentState
 maxValue
   = getValue True
 
-minValue :: Player -> Board -> Int -> AgentState
+-- Calculation for a Min agent
+minValue :: Player -> Board -> Int -> Int -> AgentState
 minValue
   = getValue False
 
-getValue :: Bool -> Player -> Board -> Int -> AgentState
-getValue isMaxValue p b level
-  | level > levelMax || terminal b  = (utility b, nullPosition)
+-- Helper function for maxValue and minValue (for abstracting out
+-- the common algorithm)
+-- It recursively calculates for all possible actions what would be
+-- the best action to take
+getValue :: Bool -> Player -> Board -> Int -> Int -> AgentState
+getValue isMax p b level prev
+  | level > levelMax || terminal b  = (utility b, b)
   | otherwise                       = bestBoard
     where
-      bestBoard = foldr1 f nextBoards
-      (recurse, comp) = if isMaxValue then (minValue, (>))
-                                      else (maxValue, (<))
-      f :: AgentState -> AgentState -> AgentState
-      f as@(u, _) as'@(u', _)
-        | u' `comp` u   = as'
+      (recurseValue, comp, initv)
+        = case isMax of True  -> (minValue, (>), utilityMinBound)
+                        False -> (maxValue, (<), utilityMaxBound)
+      f :: Board -> AgentState -> AgentState
+      f b' as@(u, _)
+        | u `comp` prev = as        -- Alpha-beta pruning
+        | u' `comp` u   = (u', b')
         | otherwise     = as
-      nextBoards :: [AgentState]
-      nextBoards
-        = do
-            a <- actions b
-            let b'      = fromJust (result p a b)
-            let (u, _)  = recurse (player p) b' (level + 1)
-            return (u, a)
+          where
+            (u', _) = recurseValue (player p) b' (level + 1) u
+      nextBoards  = [fromJust (result p a b) | a <- actions b]
+      bestBoard   = foldr f (initv, b) nextBoards
+
 
 -------------------------------------------------------------------
 -- Parsing Helper Functions
@@ -209,19 +212,15 @@ prettyPrint b
 
 -- Repeatedly read a target board position and invoke result until
 -- the move is successful (Just ...).
--- TODO change so that only when the player is X (user) it asks for user input
--- and if the player is O (AI) it gets the action from AI
 takeTurn :: Board -> Player -> IO Board
 takeTurn b p
   = do
-      if (p == X) then
-        do
-          putStr ("Player " ++ (show p) ++ " make your move (row col): ")
-          doParseAction userInput "Invalid move, try again: " :: IO Board
-      else
-        do
-          putStrLn ("AI is thinking...")
-          minimax p b
+      if (p == X) then do
+        putStr ("Player " ++ (show p) ++ " make your move (row col): ")
+        doParseAction userInput "Invalid move, try again: " :: IO Board
+      else do
+        putStrLn ("AI is thinking...")
+        minimax p b
     where
       userInput cin
         = do
@@ -238,22 +237,19 @@ playGame b p
       prettyPrint b
       b' <- takeTurn b p
       isGameOver <- return (terminal b')
-      if isGameOver then
-        do
-          prettyPrint b'
-          if (utility b' == 0) then
-            do putStrLn ("Draw: No player won.")
-          else
-            do putStrLn ("Player " ++ (show p) ++ " has won!")
-      else if (p == O) then
-        do playGame b' X
-      else
-        do playGame b' O
+      if isGameOver then do
+        prettyPrint b'
+        if (utility b' == 0) then do
+          putStrLn ("Draw: No player won.")
+        else do
+          putStrLn ("Player " ++ (show p) ++ " has won!")
+      else if (p == O) then do
+        playGame b' X
+      else do
+        playGame b' O
 
 -- Print a welcome message, read the board dimension, invoke playGame and
 -- exit with a suitable message.
--- TODO ask whether user wants to go first and call playGame initially
--- differently (X is always the user)
 main :: IO ()
 main
   = do
@@ -261,8 +257,12 @@ main
       putStr "Enter the board size (N > 2): "
       n <- doParseAction getSize "Invalid N size, try again: "
       let b = (replicate (n * n) Empty, n)
-      playGame b X
+      putStr "Which player should go first? X (you) or O (AI)?: "
+      p <- doParseAction getFirstOrder "Please select either X or O: "
+      playGame b p
       putStrLn "Thank you for playing"
     where
       getSize str
-        = filterMaybe (\i -> (2 < i)) (readMaybe str :: Maybe Int)
+        = filterMaybe (\i -> i > 2) (readMaybe str :: Maybe Int)
+      getFirstOrder str
+        = (readMaybe (map toUpper str) :: Maybe Player)
