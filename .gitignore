@@ -1,0 +1,4 @@
+# Ignore junk files related to compiling TicTacToe.hs
+TicTacToe
+*.hi
+*.o

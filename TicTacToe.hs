@@ -5,6 +5,7 @@ import Data.Char
 import Data.Maybe
 import Data.List
 import Text.Read
+import System.IO
 
 -------------------------------------------------------------------
 data Player = O | X
@@ -127,7 +128,7 @@ utilityMinBound = -2
 utilityMaxBound = 2
 
 levelMax :: Int
-levelMax = 3
+levelMax = 5
 
 -- Returns the board after the minimax AI agent decided on its best move
 minimax :: Player -> Board -> IO Board
@@ -169,7 +170,6 @@ getValue isMax p b level prev
       nextBoards  = [fromJust (result p a b) | a <- actions b]
       bestBoard   = foldr f (initv, b) nextBoards
 
-
 -------------------------------------------------------------------
 -- Parsing Helper Functions
 
@@ -192,11 +192,18 @@ doParseAction f errorMessage
       case parsed of
         (Just val)  ->  return val
         Nothing     ->  do
-                          putStr errorMessage
+                          putStrFlush errorMessage
                           doParseAction f errorMessage
 
 -------------------------------------------------------------------
 -- I/O Functions
+
+-- Flush the output buffer after printing without newline char
+-- to fix the behaviour when program compiled
+putStrFlush :: String -> IO ()
+putStrFlush text = do
+    putStr text
+    hFlush stdout
 
 -- Prints the given board, players represented by how
 -- Player instantiates Show
@@ -216,7 +223,7 @@ takeTurn :: Board -> Player -> IO Board
 takeTurn b p
   = do
       if (p == X) then do
-        putStr ("Player " ++ (show p) ++ " make your move (row col): ")
+        putStrFlush ("Player " ++ (show p) ++ " make your move (row col): ")
         doParseAction userInput "Invalid move, try again: " :: IO Board
       else do
         putStrLn ("AI is thinking...")
@@ -254,10 +261,10 @@ main :: IO ()
 main
   = do
       putStrLn "Welcome to tic tac toe on an N x N board"
-      putStr "Enter the board size (N > 2): "
+      putStrFlush "Enter the board size (N > 2): "
       n <- doParseAction getSize "Invalid N size, try again: "
       let b = (replicate (n * n) Empty, n)
-      putStr "Which player should go first? X (you) or O (AI)?: "
+      putStrFlush "Which player should go first? X (you) or O (AI)?: "
       p <- doParseAction getFirstOrder "Please select either X or O: "
       playGame b p
       putStrLn "Thank you for playing"
