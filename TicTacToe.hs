@@ -126,6 +126,9 @@ utilityMinBound, utilityMaxBound :: Int
 utilityMinBound = -2
 utilityMaxBound = 2
 
+levelMax :: Int
+levelMax = 100
+
 nullPosition :: Position
 nullPosition = (-1, -1)
 
@@ -133,35 +136,35 @@ minimax :: Player -> Board -> IO Board
 minimax p b
   = return (fromJust (result p a b))
     where
-      (_, a)  = case p of X -> maxValue p b --utilityMaxBound
-                          O -> minValue p b --utilityMinBound
+      (_, a)  = case p of X -> maxValue p b 0 --utilityMaxBound
+                          O -> minValue p b 0 --utilityMinBound
 
-maxValue :: Player -> Board -> AgentState
+maxValue :: Player -> Board -> Int -> AgentState
 maxValue
   = getValue True
 
-minValue :: Player -> Board -> AgentState
+minValue :: Player -> Board -> Int -> AgentState
 minValue
   = getValue False
 
-getValue :: Bool -> Player -> Board -> AgentState
-getValue isMaxValue p b
-  | terminal b  = (utility b, nullPosition)
-  | otherwise   = bestBoard
+getValue :: Bool -> Player -> Board -> Int -> AgentState
+getValue isMaxValue p b level
+  | level > levelMax || terminal b  = (utility b, nullPosition)
+  | otherwise                       = bestBoard
     where
-      bestBoard = foldl1' f nextBoards
+      bestBoard = foldr1 f nextBoards
       (recurse, comp) = if isMaxValue then (minValue, (>))
                                       else (maxValue, (<))
       f :: AgentState -> AgentState -> AgentState
       f as@(u, _) as'@(u', _)
-        | u' `comp` u = as'
-        | otherwise   = as
+        | u' `comp` u   = as'
+        | otherwise     = as
       nextBoards :: [AgentState]
       nextBoards
         = do
             a <- actions b
             let b'      = fromJust (result p a b)
-            let (u, _)  = recurse (player p) b'
+            let (u, _)  = recurse (player p) b' (level + 1)
             return (u, a)
 
 -------------------------------------------------------------------
