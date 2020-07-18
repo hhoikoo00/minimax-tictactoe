@@ -12,16 +12,6 @@ import Minimax
 -------------------------------------------------------------------
 -- Parsing Helper Functions
 
--- Moves must be of the form "row col" where row and col are integers
--- separated by whitespace. Bounds checking happens in result, not here.
-parsePosition :: String -> Maybe Position
-parsePosition str
-  = do
-      [c, c'] <- return (words str)
-      d <- readMaybe c :: Maybe Int
-      d' <- readMaybe c' :: Maybe Int
-      return (d, d')
-
 -- Abstraction of 'try action until successful' pattern
 doParseAction :: (String -> Maybe a) -> String -> IO a
 doParseAction f errorMessage
@@ -62,7 +52,7 @@ prettyPrint b
 -- Repeatedly read a target board position and invoke result until
 -- the move is successful (Just ...).
 takeTurn :: Board -> Player -> Int -> IO Board
-takeTurn b p maxlvl
+takeTurn b@(_, n) p maxlvl
   = do
       if (p == X) then do
         -- If human player; X is human player
@@ -71,12 +61,23 @@ takeTurn b p maxlvl
       else do
         -- If AI's turn
         putStrLn ("AI is thinking...")
-        minimax p b maxlvl
+        return (minimax p b maxlvl)
     where
+      userInput :: String -> Maybe Board
       userInput cin
         = do
-            pos <- parsePosition cin
+            (x, y) <- parsePosition cin
+            let pos = x * n + y
             result p pos b
+      -- Moves must be of the form "row col" where row and col are integers
+      -- separated by whitespace. Bounds checking happens in result, not here.
+      parsePosition :: String -> Maybe (Int, Int)
+      parsePosition str
+        = do
+            [c, c'] <- return (words str)
+            d <- readMaybe c :: Maybe Int
+            d' <- readMaybe c' :: Maybe Int
+            return (d, d')
 
 -- Manage a game by repeatedly: 1. printing the current board, 2. using
 -- takeTurn to return a modified board, 3. checking if the game is over,
@@ -87,10 +88,10 @@ playGame b p maxlvl
   = do
       prettyPrint b
       b' <- takeTurn b p maxlvl
-      isGameOver <- return (terminal b')
+      isGameOver <- return (terminal b' p)
       if isGameOver then do
         prettyPrint b'
-        if (utility b' == 0) then do
+        if (utility b' p == 0) then do
           putStrLn ("Draw: No player won.")
         else do
           putStrLn ("Player " ++ (show p) ++ " has won!")

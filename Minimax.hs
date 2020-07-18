@@ -2,7 +2,6 @@
 module Minimax where
 
 import Data.Maybe
-import Data.List
 
 import Board
 
@@ -12,65 +11,70 @@ import Board
 -- Returns a list of all possible actions that can be taken given
 -- the current state of a board
 actions :: Board -> [Position]
-actions (cells, n)
-  = actions' 0 cells []
-    where
-      actions' :: Int -> [Cell] -> [Position] -> [Position]
-      actions' _ [] memo
-        = memo
-      actions' k (c : cs) memo
-        | c == Empty  = actions' (k + 1) cs (divMod k n: memo)
-        | otherwise   = actions' (k + 1) cs memo
+actions (cells, _)
+  = [i | (c, i) <- zip cells [0..], c == Empty]
 
 -- Returns the next player in turn
 player :: Player -> Player
-player p
-  | p == X    = O
-  | otherwise = X
+player X  = O
+player O  = X
 
 -- Only moves that are in the board and the position is Empty
 -- are accepted by the function
 result :: Player -> Position -> Board -> Maybe Board
-result p (i, j) (cells, n)
-  | i < 0 || n <= i       = Nothing
-  | j < 0 || n <= j       = Nothing
-  | cells !! pos /= Empty = Nothing
-  | otherwise             = Just (cells', n)
+result p pos (cells, n)
+  | pos < 0 || (n * n) <= pos = Nothing
+  | cells !! pos /= Empty     = Nothing
+  | otherwise                 = Just (cells', n)
     where
-      pos     = i * n + j
       cells'  = replace pos (Taken p) cells
 
--- Returns true if game is over, false otherwise
-terminal :: Board -> Bool
-terminal
-  = fst . terminalUtility
-
-terminalUtility :: Board -> (Bool, Int)
-terminalUtility b@(cells, _)
-  = (isFull cells || util /= 0, util)
+-- Helper method for calculating terminal and utility
+-- Created to calculate util only once per terminal check
+terminalUtility :: Board -> Player -> (Bool, Int)
+terminalUtility b@(cells, n) p
+  = (isFull cells || abs util == n || abs util' == n, util)
     where
-      util  = utility b
+      util  = utility b p
+      util' = utility b (player p)
       isFull :: [Cell] -> Bool
       isFull
         = not . (elem Empty)
 
--- Returns 1 if X won, -1 if O won, 0 otherwise
-utility :: Board -> Int
---Pre: b must be in a terminal state
-utility b
-  = (sum . concat) [utility' (f b) | f <- [rows, cols, diags]]
-    where
-      utility' :: [[Cell]] -> [Int]
-      utility'
-        = (map isSingleRow) . (map nub)
-      isSingleRow :: [Cell] -> Int
-      isSingleRow [Taken X]
-        = 1
-      isSingleRow [Taken O]
-        = -1
-      isSingleRow _
-        = 0
+-- Returns true if game is over, false otherwise
+terminal :: Board -> Player -> Bool
+terminal
+  = (fst .) . terminalUtility
 
+-- Given a player, returns the maximum number of uninterrupted squares
+-- X max player (so +ve) and O min player (so -ve)
+utility :: Board -> Player -> Int
+--Pre: b must be in a terminal state
+utility b p
+  = find $ map (flip utility' 0) $ concat [f b | f <- [rows, cols, diags]]
+    where
+      opponent  = player p
+      find :: [Int] -> Int
+      find  = case p of X -> maximum
+                        O -> minimum
+      op :: Int -> Int -> Int
+      op    = case p of X -> (+)
+                        O -> (-)
+      utility' :: [Cell] -> Int -> Int
+      utility' [] u
+        = u
+      utility' ((Taken p) : cs) u
+        | p == opponent = 0
+        | otherwise     = utility' cs (u `op` 1)
+      utility' (Empty : cs) u
+        = utility' cs u
+
+-- Get the maximum/minimum bound for utility depending on player
+getBound :: Player -> Int -> Int
+getBound X n
+  = n + 2
+getBound O n
+  = -(n + 2)
 
 -------------------------------------------------------------------
 -- Minimax agent
@@ -79,44 +83,51 @@ utility b
 type AgentState = (Int, Board)
 type Level = Int
 
-utilMin, utilMax :: Int
-utilMin = -2
-utilMax = 2
-
 -- Returns the board after the minimax AI agent decided on its best move
-minimax :: Player -> Board -> Level -> IO Board
-minimax p b levelMax
-  = return b'
+minimax :: Player -> Board -> Level -> Board
+minimax p b@(_, n) lvlMax
+  = b'
     where
-      (_, b') = case p of X -> maxValue p b utilMax 0 levelMax
-                          O -> minValue p b utilMin 0 levelMax
+      f       = case p of X -> maxValue
+                          O -> minValue
+      bound   = getBound p n
+      (_, b') = f b bound 0 lvlMax
 
 -- Calculation for a Max agent
-maxValue :: Player -> Board -> Int -> Level -> Level -> AgentState
+maxValue :: Board -> Int -> Level -> Level -> AgentState
 maxValue
-  = getValue True
+  = getValue True X
 
 -- Calculation for a Min agent
-minValue :: Player -> Board -> Int -> Level -> Level -> AgentState
+minValue :: Board -> Int -> Level -> Level -> AgentState
 minValue
-  = getValue False
+  = getValue False O
 
--- Helper function for maxValue and minValue (for abstracting out
--- the common algorithm)
+-- Helper function for maxValue and minValue (abstracting out the
+-- common algorithm)
 -- It recursively calculates for all possible actions what would be
 -- the best action to take
 getValue :: Bool -> Player -> Board -> Int -> Level -> Level -> AgentState
-getValue isMax p b prevBound lvl lvlMax
+getValue isMax p b@(_, n) prevBound lvl lvlMax
   | lvl > lvlMax || terminate = (util, b)
   | otherwise                 = bestBoard nextBoards (Right (utilBound, b))
     where
-      (nextGetValue, comp, utilBound)
-        | isMax     = (minValue, (>), utilMin)
-        | otherwise = (maxValue, (<), utilMax)
+      utilBound
+        = getBound (player p) n
+      (nextGetValue, comp)
+        | isMax     = (minValue, (>))   -- Max agent (X)
+        | otherwise = (maxValue, (<))   -- Min agent (O)
       (terminate, util)
-        = terminalUtility b
+        = terminalUtility b p
       nextBoards
         = [fromJust (result p a b) | a <- actions b]
+      compareBoard :: Board -> AgentState -> Either AgentState AgentState
+      compareBoard b as@(u, _)
+        | u `comp` prevBound || u == prevBound  = Left as       -- Alpha-beta pruning
+        | u' `comp` u         = Right (u', b)
+        | otherwise           = Right as
+          where
+            (u', _) = nextGetValue b u (lvl + 1) lvlMax
       bestBoard :: [Board] -> Either AgentState AgentState -> AgentState
       bestBoard _ (Left as)
         = as
@@ -124,10 +135,3 @@ getValue isMax p b prevBound lvl lvlMax
         = as
       bestBoard (b : bs) (Right as)
         = bestBoard bs (compareBoard b as)
-      compareBoard :: Board -> AgentState -> Either AgentState AgentState
-      compareBoard b as@(u, _)
-        | u `comp` prevBound  = Left as       -- Alpha-beta pruning
-        | u' `comp` u         = Right (u', b)
-        | otherwise           = Right as
-          where
-            (u', _) = nextGetValue (player p) b u (lvl + 1) lvlMax

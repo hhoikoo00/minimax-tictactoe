@@ -16,7 +16,7 @@ instance Show Cell where
 
 type Board = ([Cell], Int)
 
-type Position = (Int, Int)
+type Position = Int
 
 -------------------------------------------------------------------
 -- Utility functions
@@ -31,12 +31,10 @@ filterMaybe _ _
 
 -- Replace nth element of a list with a given item.
 replace :: Int -> a -> [a] -> [a]
-replace 0 p (_ : cs)
-  = p : cs
-replace _ _ []
-  = []
-replace n p (c : cs)
-  = c : replace (n - 1) p cs
+replace n p ls
+  = before ++ (p : after)
+    where
+      (before, (_ : after)) = splitAt n ls
 
 -- Returns the rows of a given board.
 rows :: Board -> [[Cell]]

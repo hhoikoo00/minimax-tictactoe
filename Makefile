@@ -2,7 +2,7 @@ CC     = ghc
 CFLAGS = -main-is TicTacToe.main --make -prof -fprof-auto -O2
 BUILD  = TicTacToe
 
-all:	$(BUILD)
+all:	clean $(BUILD)
 
 clean:
 	rm -f TicTacToe *.hi *.o
