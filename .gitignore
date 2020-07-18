@@ -2,3 +2,4 @@
 TicTacToe
 *.hi
 *.o
+*.prof

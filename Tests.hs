@@ -1,5 +1,9 @@
 module Tests (Tests.main) where
+
 import IC.TestSuite
+
+import Board
+import Minimax
 import TicTacToe hiding (main)
 
 
@@ -53,12 +57,13 @@ testBoard5
 
 actionsTestCases
   = [
-      testBoard1 ==> [(0,2),(1,1),(2,1),(2,2),(3,2),(3,3)]
-    , testBoard2 ==> [(0,1),(1,0),(1,1)]
-    , testBoard3 ==> [(0,2),(1,1),(1,4),(2,0),(2,1),
+      testBoard1 ==> reverse [(0,2),(1,1),(2,1),(2,2),(3,2),(3,3)]
+    , testBoard2 ==> reverse [(0,1),(1,0),(1,1)]
+    , testBoard3 ==> reverse [(0,2),(1,1),(1,4),(2,0),(2,1),
                       (3,2),(3,3),(4,1),(4,3),(4,4)]
-    , testBoard4 ==> []
-    , testBoard5 ==> [(0,0),(0,1),(0,2),(1,0),(1,1),(1,2),(2,0),(2,1),(2,2)]
+    , testBoard4 ==> reverse []
+    , testBoard5 ==> reverse [(0,0),(0,1),(0,2),(1,0),
+                      (1,1),(1,2),(2,0),(2,1),(2,2)]
     ]
 
 resultTestCases
