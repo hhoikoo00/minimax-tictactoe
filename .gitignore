@@ -3,3 +3,8 @@ TicTacToe
 *.hi
 *.o
 *.prof
+
+# Ignore Scala build files
+.idea/
+project/
+target/
