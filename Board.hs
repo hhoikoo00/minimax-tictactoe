@@ -21,6 +21,11 @@ type Position = Int
 -------------------------------------------------------------------
 -- Utility functions
 
+-- Returns the next player in turn
+player :: Player -> Player
+player X = O
+player O = X
+
 -- Preserves Just x iff x satisfies the given predicate. In all other cases
 -- (including Nothing) it returns Nothing.
 filterMaybe :: (a -> Bool) -> Maybe a -> Maybe a

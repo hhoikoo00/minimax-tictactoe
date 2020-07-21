@@ -3,7 +3,7 @@ module Tests (Tests.main) where
 import IC.TestSuite
 
 import Board
---import BoardTree
+import BoardTree
 import Minimax
 import TicTacToe hiding (main)
 
@@ -69,9 +69,9 @@ testBoard6'
       Taken O, Taken X, Taken O, Taken O],
       4)
 
---testTree1 :: Tree
+testTree1 :: Tree
 
---testTree1 = makeTree 3 X
+testTree1 = makeTree 3 X
 
 -------------------------------------------------------------------
 

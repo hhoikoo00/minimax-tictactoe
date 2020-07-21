@@ -5,6 +5,7 @@ import Data.Char
 import Data.List
 import Text.Read
 import System.IO
+import Data.Maybe
 
 import Board
 import Minimax
@@ -12,17 +13,20 @@ import Minimax
 -------------------------------------------------------------------
 -- Parsing Helper Functions
 
+lookUp :: Eq a => a -> [(a, b)] -> b
+lookUp
+  = (fromJust .) . lookup
+
 -- Abstraction of 'try action until successful' pattern
 doParseAction :: (String -> Maybe a) -> String -> IO a
-doParseAction f errorMessage
+doParseAction f errorMsg
   = do
-      cin <- getLine
-      let parsed = f cin
-      case parsed of
-        (Just val)  ->  return val
-        Nothing     ->  do
-                          putStrFlush errorMessage
-                          doParseAction f errorMessage
+      str <- getLine
+      let parsed = f str
+      case parsed of  (Just val) -> return val
+                      Nothing    -> do
+                                      putStrFlush errorMsg
+                                      doParseAction f errorMsg
 
 -------------------------------------------------------------------
 -- I/O Helper Functions
@@ -51,54 +55,50 @@ prettyPrint b
 
 -- Repeatedly read a target board position and invoke result until
 -- the move is successful (Just ...).
-takeTurn :: Board -> Player -> Int -> IO Board
-takeTurn b@(_, n) p maxlvl
+takeTurn :: Tree -> Int -> IO Tree
+takeTurn t maxlvl
   = do
+      let p = treePlayer t
       if (p == X) then do
         -- If human player; X is human player
         putStrFlush ("Player " ++ (show p) ++ " make your move (row col): ")
-        doParseAction userInput "Invalid move, try again: " :: IO Board
+        pos <- doParseAction userInput "Invalid move, try again: "
+        let (Node _ _ _ _ children) = t
+        return (lookUp pos children)
       else do
         -- If AI's turn
         putStrLn ("AI is thinking...")
-        return (minimax p b maxlvl)
+        return (minimax t maxlvl)
     where
-      userInput :: String -> Maybe Board
-      userInput cin
-        = do
-            (x, y) <- parsePosition cin
-            let pos = x * n + y
-            result p pos b
+      b@(_, n)  = treeBoard t
       -- Moves must be of the form "row col" where row and col are integers
-      -- separated by whitespace. Bounds checking happens in result, not here.
-      parsePosition :: String -> Maybe (Int, Int)
-      parsePosition str
+      -- separated by whitespace.
+      userInput :: String -> Maybe Position
+      userInput str
         = do
             [c, c'] <- return (words str)
-            d <- readMaybe c :: Maybe Int
-            d' <- readMaybe c' :: Maybe Int
-            return (d, d')
+            x <- readMaybe c :: Maybe Int
+            y <- readMaybe c' :: Maybe Int
+            validMove (x * n + y) b
 
 -- Manage a game by repeatedly: 1. printing the current board, 2. using
--- takeTurn to return a modified board, 3. checking if the game is over,
--- printing the board and a suitable congratulatory message to the winner
--- if so.
-playGame :: Board -> Player -> Int -> IO ()
-playGame b p maxlvl
+-- takeTurn to return a new subtree, 3. checking if the game is over, printing
+-- the board and a suitable congratulatory message to the winner if so.
+playGame :: Tree -> Int -> IO ()
+playGame t lvlMax
   = do
-      prettyPrint b
-      b' <- takeTurn b p maxlvl
-      isGameOver <- return (terminal b' p)
-      if isGameOver then do
+      prettyPrint (treeBoard t)
+      t' <- takeTurn t lvlMax
+      if (treeTerminal t') then do
+        let b'@(_, n) = treeBoard t'
         prettyPrint b'
-        if (utility b' p == 0) then do
+        if (abs (treeUtility t') /= n) then do
           putStrLn ("Draw: No player won.")
         else do
-          putStrLn ("Player " ++ (show p) ++ " has won!")
-      else if (p == O) then do
-        playGame b' X maxlvl
-      else do
-        playGame b' O maxlvl
+          let p = treePlayer t'
+          putStrLn ("Player " ++ (show (player p)) ++ " has won!")
+      else
+        playGame t' lvlMax
 
 -- Print a welcome message, read the board dimension, invoke playGame and
 -- exit with a suitable message.
@@ -106,14 +106,19 @@ main :: IO ()
 main
   = do
       putStrLn "Welcome to tic tac toe on an N x N board"
+      -- Get board size
       putStrFlush "Enter the board size (N > 2): "
       n <- doParseAction getN "Invalid N size, try again: "
-      let b = (replicate (n * n) Empty, n)
+      -- Get First Player
       putStrFlush "Which player should go first? X (you) or O (AI)?: "
       p <- doParseAction getFirstPlayer "Please select either X or O: "
+      -- Generate the tree
+      let t = makeTree n p
+      -- Get the depth for depth-limit search
       putStrFlush "Enter the maximum level to search: "
-      maxlvl <- doParseAction getMaxlvl "Level must be greater than 0: "
-      playGame b p maxlvl
+      lvlMax <- doParseAction getMaxlvl "Level must be greater than 0: "
+      -- Play the game
+      playGame t lvlMax
       putStrLn "Thank you for playing"
     where
       getN str
