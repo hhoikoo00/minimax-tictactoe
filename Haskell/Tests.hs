@@ -3,7 +3,6 @@ module Tests (Tests.main) where
 import IC.TestSuite
 
 import Board
-import BoardTree
 import Minimax
 import TicTacToe hiding (main)
 
@@ -56,17 +55,17 @@ testBoard5
   = (replicate (3 * 3) Empty, 3)
 
 testBoard6
-  = ([Empty, Empty, Taken X, Taken X,
-      Empty, Taken X, Empty, Empty,
-      Empty, Empty, Taken X, Taken O,
-      Taken O, Taken X, Taken O, Taken O],
+  = ([Empty,    Empty,    Taken X,  Taken X,
+      Empty,    Taken X,  Empty,    Empty,
+      Empty,    Empty,    Taken X,  Taken O,
+      Taken O,  Taken X,  Taken O,  Taken O],
       4)
 
 testBoard6'
-  = ([Empty, Empty, Taken X, Taken X,
-      Empty, Taken X, Empty, Empty,
-      Taken O, Empty, Taken X, Taken O,
-      Taken O, Taken X, Taken O, Taken O],
+  = ([Empty,    Empty,    Taken X,  Taken X,
+      Empty,    Taken X,  Empty,    Empty,
+      Taken O,  Empty,    Taken X,  Taken O,
+      Taken O,  Taken X,  Taken O,  Taken O],
       4)
 
 testTree1 :: Tree
