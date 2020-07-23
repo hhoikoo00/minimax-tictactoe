@@ -9,8 +9,7 @@ object TicTacToe {
     /* Initialize a new board and both players */
     val board = new Board(
       Parser.boardSize(),
-      Parser.startPlayer()
-    )
+      Parser.startPlayer())
     val players = Parser.players(board)
 
     /* Play the game */
@@ -21,9 +20,9 @@ object TicTacToe {
 
     /* Display the result */
     println(board)
-    math.abs(board.utility) match {
-      case board.dim => println(s"Player ${board.player.opponent} won!")
-      case _ => println("Draw: no player won.")
+    board.winner match {
+      case Some(p) => println(s"Player $p won!")
+      case None => println("Draw: no player won.")
     }
     println("Thank you for playing the game")
   }

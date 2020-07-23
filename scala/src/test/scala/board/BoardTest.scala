@@ -81,12 +81,30 @@ class BoardTest extends AnyFunSuite {
     Taken(O), Taken(X), Taken(O), Taken(O)
   ))
 
-  ignore("rows") {
-
+  test("rows") {
+    assertResult(Array(
+      Array(Taken(O), Taken(X), Taken(O)),
+      Array(Taken(X), Taken(O), Taken(O)),
+      Array(Taken(X), Taken(O), Taken(X))
+    ))(testBoard4.rows)
+    assertResult(Array(
+      Array(Empty, Empty, Empty),
+      Array(Empty, Empty, Empty),
+      Array(Empty, Empty, Empty)
+    ))(testBoard5.rows)
   }
 
-  ignore("cols") {
-
+  test("cols") {
+    assertResult(Array(
+      Array(Taken(O), Taken(X), Taken(X)),
+      Array(Taken(X), Taken(O), Taken(O)),
+      Array(Taken(O), Taken(O), Taken(X))
+    ))(testBoard4.cols)
+    assertResult(Array(
+      Array(Empty, Empty, Empty),
+      Array(Empty, Empty, Empty),
+      Array(Empty, Empty, Empty)
+    ))(testBoard5.cols)
   }
 
   test("diags") {
@@ -101,15 +119,15 @@ class BoardTest extends AnyFunSuite {
   }
 
   test("actions") {
-    assertResult(Seq(2, 5, 9, 10, 14, 15))(testBoard1.actions)
-    assertResult(Seq(2, 5, 8, 9, 10, 14, 15))(testBoard1_.actions)
-    assertResult(1 to 8)(testBoard2.actions)
-    assertResult(Seq(2, 6, 9, 10, 11, 17, 18, 21, 23, 24))(testBoard3.actions)
-    assertResult(Seq(2, 6, 9, 10, 11, 12, 17, 18, 21, 23, 24))(testBoard3_.actions)
-    assertResult(Seq())(testBoard4.actions)
-    assertResult(0 to 8)(testBoard5.actions)
-    assertResult(Seq(0, 1, 4, 6, 7, 8, 9))(testBoard6.actions)
-    assertResult(Seq(0, 1, 4, 6, 7, 9))(testBoard6_.actions)
+    assertResult(Seq(2, 5, 9, 10, 14, 15))(testBoard1.actions.sorted)
+    assertResult(Seq(2, 5, 8, 9, 10, 14, 15))(testBoard1_.actions.sorted)
+    assertResult(Seq(1, 3, 4))(testBoard2.actions.sorted)
+    assertResult(Seq(2, 6, 9, 10, 11, 17, 18, 21, 23, 24))(testBoard3.actions.sorted)
+    assertResult(Seq(2, 6, 9, 10, 11, 12, 17, 18, 21, 23, 24))(testBoard3_.actions.sorted)
+    assertResult(Seq())(testBoard4.actions.sorted)
+    assertResult(Seq(4))(testBoard5.actions.sorted)
+    assertResult(Seq(0, 1, 4, 6, 7, 8, 9))(testBoard6.actions.sorted)
+    assertResult(Seq(0, 1, 4, 6, 7, 9))(testBoard6_.actions.sorted)
   }
 
   test("terminal") {
@@ -124,6 +142,18 @@ class BoardTest extends AnyFunSuite {
     assertResult(false)(testBoard6_.terminal)
   }
 
+  test("winner") {
+    assertResult(Some(O))(testBoard1.winner)
+    assertThrows[IllegalArgumentException](testBoard1_.winner)
+    assertThrows[IllegalArgumentException](testBoard2.winner)
+    assertResult(Some(X))(testBoard3.winner)
+    assertThrows[IllegalArgumentException](testBoard3_.winner)
+    assertResult(None)(testBoard4.winner)
+    assertThrows[IllegalArgumentException](testBoard5.winner)
+    assertThrows[IllegalArgumentException](testBoard6.winner)
+    assertThrows[IllegalArgumentException](testBoard6_.winner)
+  }
+
   test("utility") {
     assertResult(-4)(testBoard1.utility)
     assertResult(-3)(testBoard1_.utility)
@@ -136,11 +166,37 @@ class BoardTest extends AnyFunSuite {
     assertResult(2)(testBoard6_.utility)
   }
 
-  ignore("applyMove") {
+  test("applyMove") {
+    val testBoard = new Board(3, X)
+    initBoard(testBoard, Seq(
+      Taken(O), Empty, Taken(X),
+      Taken(X), Empty, Taken(O),
+      Empty, Empty, Empty
+    ))
+    val currentPlayer = testBoard.player
 
+    testBoard.applyMove(4, X)
+
+    assertResult(Taken(X))(testBoard.board(4))
+    assertResult(currentPlayer.opponent)(testBoard.player)
+
+    assertThrows[IllegalArgumentException](testBoard.applyMove(4, X))
   }
 
-  ignore("unapplyMove") {
+  test("unapplyMove") {
+    val testBoard = new Board(3, X)
+    initBoard(testBoard, Seq(
+      Taken(O), Empty, Taken(X),
+      Taken(X), Empty, Taken(O),
+      Empty, Empty, Empty
+    ))
+    val currentPlayer = testBoard.player
 
+    testBoard.unapplyMove(3)
+
+    assertResult(Empty)(testBoard.board(3))
+    assertResult(currentPlayer.opponent)(testBoard.player)
+
+    assertThrows[IllegalArgumentException](testBoard.unapplyMove(3))
   }
 }

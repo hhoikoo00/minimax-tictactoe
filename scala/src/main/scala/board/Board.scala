@@ -15,6 +15,7 @@ class Board(val dim: Int, private var _player: Player) {
   type Position = Int
 
   private val size = dim * dim
+
   val board: Array[Cell] = Array.fill[Cell](size)(Empty)
 
   def player: Player = _player
@@ -94,7 +95,21 @@ class Board(val dim: Int, private var _player: Player) {
    *
    * @return Seq of all possible actions
    */
-  def actions: Seq[Position] = (0 until size).filter(board(_) == Empty)
+  def actions: Seq[Position] = if (board forall Set(Empty))
+    Seq((dim / 2) * dim + (dim / 2))
+  else
+    (0 until size)
+      .filter(board(_) != Empty)
+      .map(i => (i / dim, i % dim))
+      .flatMap { case (x, y) =>
+        (for (x_ <- (x - 1) to (x + 1); y_ <- (y - 1) to (y + 1)) yield (x_, y_))
+          .filter { case (x, y) =>
+            (0 <= x && x < dim) && (0 <= y && y < dim) && board(x * dim + y) == Empty
+          }
+          .map { case (x, y) => x * dim + y }
+      }.toSet.toSeq
+
+  /* def actions_old: Seq[Position] = (0 until size).filter(board(_) == Empty) */
 
   /**
    * Returns whether a position is valid
@@ -111,6 +126,12 @@ class Board(val dim: Int, private var _player: Player) {
    */
   def terminal: Boolean = !board.contains(Empty) || math.abs(utility) == dim
 
+  def winner: Option[Player] = {
+    require(terminal)
+
+    if (math.abs(utility) == dim) Some(player.opponent) else None
+  }
+
   /**
    * Calculate the expected utility, which is the maximum number of uninterrupted squares
    * a player has, returning a value for whichever player has the larger value
@@ -118,20 +139,21 @@ class Board(val dim: Int, private var _player: Player) {
    *
    * @return The utility value of the board
    */
-  def utility: Int = (rows ++ cols ++ diags)
-    // Get count of all Xs and Os
-    .map(_.foldLeft((0, 0))((t, c) => t match {
-      case (x, o) => c match {
-        case Taken(X) => (x + 1, o)
-        case Taken(O) => (x, o + 1)
-        case Empty => (x, o)
-      }
-    }))
-    // Only get rows that only have Os or Xs
-    .filter { case (x, o) => (x == 0 && o != 0) || (x != 0 && o == 0) }
-    // Get the maximum o and x value and return the utility
-    .foldLeft((0, 0))((s, t) => (math.max(s._1, t._1), math.max(s._2, t._2)))
-  match {
-    case (x, o) => if (x == o) if (player == X) x else -o else if (x > o) x else -o
-  }
+  def utility: Int =
+    (rows ++ cols ++ diags)
+      // Get count of all Xs and Os
+      .map(_.foldLeft((0, 0))((t, c) => t match {
+        case (x, o) => c match {
+          case Taken(X) => (x + 1, o)
+          case Taken(O) => (x, o + 1)
+          case Empty => (x, o)
+        }
+      }))
+      // Only get rows that only have Os or Xs
+      .filter { case (x, o) => (x == 0 && o != 0) || (x != 0 && o == 0) }
+      // Get the maximum o and x value and return the utility
+      .foldLeft((0, 0))((s, t) => (math.max(s._1, t._1), math.max(s._2, t._2)))
+    match {
+      case (x, o) => if (x > o || (x == o && player == X)) x else -o
+    }
 }
