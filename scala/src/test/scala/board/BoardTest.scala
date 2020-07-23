@@ -163,7 +163,7 @@ class BoardTest extends AnyFunSuite {
     assertResult(0)(testBoard4.utility)
     assertResult(0)(testBoard5.utility)
     assertResult(2)(testBoard6.utility)
-    assertResult(2)(testBoard6_.utility)
+    assertResult(-2)(testBoard6_.utility)
   }
 
   test("applyMove") {

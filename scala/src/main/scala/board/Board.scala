@@ -154,6 +154,6 @@ class Board(val dim: Int, private var _player: Player) {
       // Get the maximum o and x value and return the utility
       .foldLeft((0, 0))((s, t) => (math.max(s._1, t._1), math.max(s._2, t._2)))
     match {
-      case (x, o) => if (x > o || (x == o && player == X)) x else -o
+      case (x, o) => if (x > o || x == o && player.opponent == X) x else -o
     }
 }
