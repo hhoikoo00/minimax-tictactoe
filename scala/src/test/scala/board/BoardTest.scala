@@ -10,7 +10,7 @@ class BoardTest extends AnyFunSuite {
 
     var move = 0
     elems foreach {
-      case Taken(p) => board.applyMove(move, p); move += 1
+      case Taken(p) => board.applyMove(move); board.board(move) = Taken(p); move += 1
       case Empty => move += 1
     }
   }
@@ -175,12 +175,12 @@ class BoardTest extends AnyFunSuite {
     ))
     val currentPlayer = testBoard.player
 
-    testBoard.applyMove(4, X)
+    testBoard.applyMove(4)
 
     assertResult(Taken(X))(testBoard.board(4))
     assertResult(currentPlayer.opponent)(testBoard.player)
 
-    assertThrows[IllegalArgumentException](testBoard.applyMove(4, X))
+    assertThrows[IllegalArgumentException](testBoard.applyMove(4))
   }
 
   test("unapplyMove") {

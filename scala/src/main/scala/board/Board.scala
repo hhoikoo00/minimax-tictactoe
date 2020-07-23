@@ -69,9 +69,8 @@ class Board(val dim: Int, private var _player: Player) {
    * Mark the player's move at the given position; move must be valid
    *
    * @param move   position to apply the move
-   * @param player player that makes the move
    */
-  def applyMove(move: Position, player: Player): Unit = {
+  def applyMove(move: Position): Unit = {
     require(validPosition(move) && board(move) == Empty)
 
     board(move) = Taken(player)

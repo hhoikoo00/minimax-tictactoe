@@ -16,6 +16,6 @@ class HumanPlayer(board: Board, player: Player) extends AbstractPlayer(board, pl
         y = input(1).toInt
       } yield x * board.dim + y).filter(board.validPosition)
     } { _ => print("Invalid move, try again: ") }
-    board.applyMove(move, player)
+    board.applyMove(move)
   }
 }
